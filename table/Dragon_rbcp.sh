@@ -869,12 +869,14 @@ echo \
 "wrb x10b6 1
 wrs x10a5 x3020
 wrb x10a0 xff" >$tmpfile
+echo "converting ADC values..."
 command_rbcp "load $tmpfile"
 
 
 sleep 2
 
-
+echo ""
+echo "reading SCB RAM..."
 for i in {0..2}
 do
   rdscbram
@@ -885,22 +887,30 @@ echo \
 "wrb x10b6 1
 wrs x10a5 x3053
 wrb x10a0 xff" >$tmpfile
+echo ""
+echo "converting Amp Temp...."
 command_rbcp "load $tmpfile"
 
 
 sleep 2
 
+echo ""
+echo "reading SCB RAM..."
 i=3 rdscbram
 
 echo \
 "wrb x10b6 1
 wrs x10a5 x306f
 wrb x10a0 xff" >>$tmpfile
+echo ""
+echo "converting SCB Temp...."
 command_rbcp "load $tmpfile"
 
 
 sleep 2
 
+echo ""
+echo "reading SCB RAM..."
 i=4 rdscbram
 
 usleep 700000
