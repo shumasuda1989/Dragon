@@ -2,7 +2,7 @@
 
 DEBUG_FLAG=0
 
-DragonIPdef=5
+DragonIPdef=146
 DragonIP=$DragonIPdef
 
 usage(){
@@ -386,7 +386,7 @@ do
 	  exit
 	  ;;
       -rd)
-	  int_check $((0$2)) $((0x1000)) $((0x10cf))
+	  int_check $((0$2)) $((0x0)) $((0x10cf))
 	  command_rbcp -nq "rd $2 $3" 
 	  if [ "x$(echo "$4" | grep ".txt$")" != "x" ]; then
 	      cat rcvdBuf.txt >$4

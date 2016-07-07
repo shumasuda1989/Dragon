@@ -84,7 +84,7 @@ class COUNT : public TObject
   UInt_t EvtNum;
   UInt_t PPS;
   UInt_t TrgCnt;
-  UInt_t ClkCnt; //usec
+  ULong_t ClkCnt; //usec
   UInt_t ClkCnt10M; //usec
 
   COUNT();

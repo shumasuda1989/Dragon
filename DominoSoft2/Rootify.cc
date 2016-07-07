@@ -9,7 +9,7 @@
 int Rootify(const char *datfile, const TString pedfile=0);
 bool SetOffset(const char *filename, Double_t **offset);
 inline void Decoder(ifstream &fin, CDomino **d, COUNT *c, int rd, Double_t **offset=0);
-inline void Reader(ifstream &fin, const int bytes, UInt_t &buf);
+template <typename T> inline void Reader(ifstream &fin, const int bytes, T &buf);
 inline int ReadDepthChecker(ifstream &fin);
 inline int EvNumChecker(ifstream &fin, int rd);
 
@@ -202,7 +202,8 @@ inline void Decoder(ifstream &fin, CDomino **d, COUNT *c, int rd, Double_t **off
 
 }
 
-inline void Reader(ifstream &fin, const int bytes, UInt_t &ubuf)
+template <typename T>
+inline void Reader(ifstream &fin, const int bytes, T &ubuf)
 {
   ubuf=0;
 

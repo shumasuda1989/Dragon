@@ -1,5 +1,5 @@
 #!/bin/bash
-DragonIPdef=5
+DragonIPdef=146
 if [ "x$1" != "x" ]; then
     DragonIP=$1
 else
