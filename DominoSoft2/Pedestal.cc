@@ -63,7 +63,7 @@ void Pedestal(TString rootfile, TString newname)
     if(count->EvtNum <100) continue;
  
     for(int ch=0;ch<16;ch++)
-      for(int cell=3;cell<c[ch]->GetN()-3;cell++)
+      for(int cell=12;cell<c[ch]->GetN()-3;cell++)
 	p[ch]->Fill((c[ch]->GetStopCell()+cell)%CELLNUM,c[ch]->GetY()[cell]);
 
     if(i%1000==0) cout << "\r" << i<< ": " << c[0]->GetY()[10] <<flush;

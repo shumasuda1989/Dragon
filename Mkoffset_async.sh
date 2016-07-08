@@ -1,31 +1,34 @@
 #!/bin/bash
-DragonIPdef=146
+DragonIPdef=126
 if [ "x$1" != "x" ]; then
     DragonIP=$1
 else
     DragonIP=$DragonIPdef
 fi
 
+readdepth=40
+
 table/Dragon_rbcp.sh -i $DragonIP
 table/Dragon_rbcp.sh -f 65 $DragonIP
+table/Dragon_rbcp.sh -d ${readdepth} $DragonIP
+table/Dragon_rbcp.sh -s 0 $DragonIP
+table/Dragon_rbcp.sh -wrb x109c 4 $DragonIP
+
 sleep 3
 
+#freqlist=\
+#"1319998
+# 1320130
+# 1320262
+# 1320394"
 freqlist=\
-"1319998
-1320130
-1320262
-1320394" # for ped_freq=65
-# freqlist=\
-# "1333206
-# 1333342
-# 1333478
-# 1333614" # for ped_freq=67
+"1333206"
 
 
 for freq in $freqlist
 do
 
-for offset in 10 77 
+for offset in 10 20
 do
     table/Dragon_rbcp.sh -pf $freq $DragonIP
     sleep 1
@@ -39,6 +42,6 @@ done
 
 cat ped*.dat >ped.dat
 
-./Mkoffset ped.dat offset.dat 1024
+./Mkoffset ped.dat offset.dat $readdepth
 ./Rootify ped.dat
 ./Pedestal ped.root
