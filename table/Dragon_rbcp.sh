@@ -2,7 +2,7 @@
 
 DEBUG_FLAG=0
 
-DragonIPdef=146
+DragonIPdef=0
 DragonIP=$DragonIPdef
 
 usage(){
@@ -110,6 +110,8 @@ HVFlag=0
 HVnAFlag=0
 MonitorFlag=0
 FirstDoneFlag=0
+RBCPWrFlag=0
+RBCPRdFlag=0
 
 while [ "$#" -gt 0 ]
 do
@@ -381,19 +383,17 @@ do
 
       -wr?)
 	  int_check $((0$2)) $((0x1000)) $((0x10cf))
+	  RBCPWrFlag=1
 	  com=$(echo "$1" | sed -e 's/^-//')
-	  command_rbcp -nq "$com $2 $3" 
-	  exit
+	  RBCPCOM="$com $2 $3" 
+	  shift 3
 	  ;;
       -rd)
 	  int_check $((0$2)) $((0x0)) $((0x10cf))
-	  command_rbcp -nq "rd $2 $3" 
-	  if [ "x$(echo "$4" | grep ".txt$")" != "x" ]; then
-	      cat rcvdBuf.txt >$4
-	  fi
-#	  rbcpread tmptmptmp
-#	  echo $2 $tmptmptmp
-	  exit
+	  RBCPRdFlag=1
+	  RBCPCOM="rd $2 $3"
+	  TMPBUFFILENAME=$4
+	  shift 4
 	  ;;
       -*)
 	  usage
@@ -415,6 +415,21 @@ done
 
 echo DragonIP=192.168.1.$DragonIP
 
+if [ "$RBCPWrFlag" -eq 1 ]; then 
+    command_rbcp -nq "$RBCPCOM"
+    exit
+fi
+
+if [ "$RBCPRdFlag" -eq 1 ]; then
+    command_rbcp -nq "$RBCPCOM"
+    if [ "x$(echo "$TMPBUFFILENAME" | grep ".txt$")" != "x" ]; then
+	cat rcvdBuf.txt >$TMPBUFFILENAME
+    fi
+#	  rbcpread tmptmptmp
+#	  echo $2 $tmptmptmp
+    exit
+fi
+ 
 #tmpfile=$(date +"tmp%m%d%H%M%S%N")
 tmpfile=$(date +"tmp%m%d%H%M%S")
 if [ -f $tmpfile ]; then rm $tmpfile; fi
