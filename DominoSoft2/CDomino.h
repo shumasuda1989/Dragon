@@ -38,7 +38,7 @@ class CDomino : public TGraph
 {
  private:
   bool dIsRaw;
-  int dStopCell;
+  UShort_t dStopCell;
   int dCell[READDEPTH]; //!
   double dMinADC; //!
   double dArrTime; //!
@@ -55,7 +55,7 @@ class CDomino : public TGraph
   int GetCell(int slice){ return dCell[slice];}
   void SetStopCell(int cell){ dStopCell=cell;}
   void SetCell();
-  int GetStopCell(){ return dStopCell;}
+  UShort_t GetStopCell(){ return dStopCell;}
   void SetIsRaw(bool tf){ dIsRaw=tf; }
   bool IsRaw(){ return dIsRaw; }
   //void ExcludeSpike(COffset*,int firstbin,int lastbin);
@@ -81,17 +81,17 @@ class CDomino : public TGraph
 class COUNT : public TObject
 {
  public:
-  UInt_t EvtNum;
-  UInt_t PPS;
-  UInt_t TrgCnt;
-  ULong_t ClkCnt; //usec
+  UShort_t PPS;
   UInt_t ClkCnt10M; //usec
+  UInt_t EvtCnt;
+  UInt_t TrgCnt;
+  ULong64_t ClkCnt; //usec
 
   COUNT();
   ~COUNT(){}
 
   ClassDef(COUNT,1)
 
-} ;
+};
 
 #endif
