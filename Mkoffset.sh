@@ -7,19 +7,19 @@ else
 fi
 
 table/Dragon_rbcp.sh -i $DragonIP
-#table/Dragon_rbcp.sh -f 65 $DragonIP
+table/Dragon_rbcp.sh -f 65 $DragonIP
 sleep 3
 
-#freqlist=\
-#"1319998
-# 1320130
-# 1320262
-# 1320394" # for ped_freq=65
 freqlist=\
-"1333206
-1333342
-1333478
-1333614" # for ped_freq=67
+"1319998
+1320130
+1320262
+1320394" # for ped_freq=65
+# freqlist=\
+# "1333206
+# 1333342
+# 1333478
+# 1333614" # for ped_freq=67
 
 
 for freq in $freqlist

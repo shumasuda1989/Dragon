@@ -127,7 +127,7 @@ int Rootify(const char* datfile, const TString pedfile)
   delete cnt;
   fin.close();
 
-  f.Write();
+  f.Write(0,TObject::kOverwrite);
   //tr.Print();
 
   return 0;
