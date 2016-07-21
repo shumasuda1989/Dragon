@@ -38,6 +38,8 @@ void Pedestal(TString rootfile, TString newname)
   //e->SetDirectory(0);
   //f->Close();
 
+  TH1::SetDefaultSumw2();
+
   TString filename;
   if(newname.IsNull()) filename="offset.root";
   else if(newname.EndsWith(".root")) filename=newname;
@@ -60,7 +62,7 @@ void Pedestal(TString rootfile, TString newname)
          if(i%10000<200) continue; */
     e->GetEntry(i);
 
-    if(count->EvtNum <100) continue;
+    if(count->EvtCnt <100) continue;
  
     for(int ch=0;ch<16;ch++)
       for(int cell=12;cell<c[ch]->GetN()-3;cell++)

@@ -183,7 +183,7 @@ ClassImp(COUNT)
 
 COUNT::COUNT() : TObject()
 {
-  EvtNum=0;
+  EvtCnt=0;
   PPS=0;
   TrgCnt=0;
   ClkCnt=0;

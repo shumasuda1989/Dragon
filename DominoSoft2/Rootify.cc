@@ -8,8 +8,10 @@
 
 int Rootify(const char *datfile, const TString pedfile=0);
 bool SetOffset(const char *filename, Double_t **offset);
-inline void Decoder(ifstream &fin, CDomino **d, COUNT *c, int rd, Double_t **offset=0);
-template <typename T> inline void Reader(ifstream &fin, const int bytes, T &buf);
+inline void Decoder(char *buf_ev, CDomino **d, COUNT *c, int rd, Double_t **offset);
+template <typename T> 
+inline void Reader(char *buf_ev, T &ubuf, int &pointer);
+
 inline int ReadDepthChecker(ifstream &fin);
 inline int EvNumChecker(ifstream &fin, int rd);
 
@@ -107,9 +109,18 @@ int Rootify(const char* datfile, const TString pedfile)
   }
   tr.Branch("Count","COUNT",&cnt);
 
+  int size_ev=16*(4+2*rd);
+  char *buf_ev = new char[size_ev];
+
   ////// MAIN LOOP //////
   for(int ev=0;ev<Nev;ev++){
-    Decoder(fin,ADCch,cnt,rd,offset);
+
+    if(!fin.read(buf_ev,size_ev)){
+      cerr << "EOF" << endl;
+      break;
+    }
+
+    Decoder(buf_ev,ADCch,cnt,rd,offset);
     tr.Fill();
 
     cout << "\r" << ev << flush;
@@ -118,6 +129,7 @@ int Rootify(const char* datfile, const TString pedfile)
   //cout << "\r" << Nev << endl;
   cout << endl;
 
+  delete buf_ev;
   if(offset){
     for(int i=0;i<Nch;i++)
       delete[] offset[i];
@@ -127,7 +139,7 @@ int Rootify(const char* datfile, const TString pedfile)
   delete cnt;
   fin.close();
 
-  f.Write(0,TObject::kOverwrite);
+  f.Write("", TObject::kOverwrite);
   //tr.Print();
 
   return 0;
@@ -157,36 +169,34 @@ bool SetOffset(const char *filename, Double_t **offset)
 
 }
 
-inline void Decoder(ifstream &fin, CDomino **d, COUNT *c, int rd, Double_t **offset)
+inline void Decoder(char *buf_ev, CDomino **d, COUNT *c, int rd, Double_t **offset)
 {
-  UInt_t buf;
-  Reader(fin,2,buf); //for 2bytes skip
+  UShort_t buf;
+  int pointer=2; //for 2bytes skip
 
-  Reader(fin,2,c->PPS);
-  Reader(fin,4,c->ClkCnt10M);
-  Reader(fin,4,c->EvtNum);
-  Reader(fin,4,c->TrgCnt);
-  Reader(fin,8,c->ClkCnt);
+  Reader(buf_ev,c->PPS,pointer);
+  Reader(buf_ev,c->ClkCnt10M,pointer);
+  Reader(buf_ev,c->EvtCnt,pointer);
+  Reader(buf_ev,c->TrgCnt,pointer);
+  Reader(buf_ev,c->ClkCnt,pointer);
 
-  Reader(fin,24,buf); //for 24bytes skip
+  pointer+=24; //for 24bytes skip
 
   const int Nchip=8;
   int chip2ch[Nchip]={0,  8,2, 10,4, 12,6, 14}; //(i%2)*7+i
   //  chip2ch[Nchip]={0,0+8,2,2+8,4,4+8,6,6+8}; 
 
   for(int i=0;i<Nchip;i++){
-    Reader(fin,2,buf);
+    Reader(buf_ev,buf,pointer);
     d[chip2ch[i]  ]->SetStopCell(buf);
     d[chip2ch[i]+1]->SetStopCell(buf);
   }
-
-  int counter=0;
 
   for(int i=0;i<=1;i++) // 2 ch loop in a chip e.g. HG 0 & 1.
     for(int slice=0;slice<rd;slice++)
       for(int chip=0;chip<Nchip;chip++){
 
-	Reader(fin,2,buf);
+	Reader(buf_ev,buf,pointer);
 
 	if(offset){
 	  int cellID=(d[chip2ch[chip]+i]->GetStopCell()+slice)%CELLNUM;
@@ -196,36 +206,30 @@ inline void Decoder(ifstream &fin, CDomino **d, COUNT *c, int rd, Double_t **off
 	} else
 	  d[chip2ch[chip]+i]->SetPoint(slice,slice,buf);
 
-	counter++;
-
       }
 
 }
 
 template <typename T>
-inline void Reader(ifstream &fin, const int bytes, T &ubuf)
+inline void Reader(char *buf_ev, T &ubuf, int &pointer)
 {
-  ubuf=0;
+  const int bytes=sizeof(ubuf);
 
-  for(int i=0;i<bytes;i++){
-    ubuf <<= 8;
-    if(!fin.read((char*)&ubuf,1)){
-      cout << "EOF" << endl;
-      return;
-    }
-  }
+  for(int i=0;i<bytes;i++)
+    ((char*)&ubuf)[i]=buf_ev[pointer+bytes-i-1];
+
+  pointer+=bytes;
 
 }
 
 inline int ReadDepthChecker(ifstream &fin)
 {
   fin.seekg(0,ios::beg);
-  UInt_t buf;
+  unsigned char buf[32];
   int counter=-2;
   while(1){
-    Reader(fin,2,buf);
-    if(counter>0 && buf==0xaaaa) break;
-    Reader(fin,30,buf);
+    fin.read((char*)buf,sizeof(buf));
+    if(counter>0 && buf[0]==0xaa && buf[1]==0xaa) break;
     counter++;
   }
 

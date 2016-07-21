@@ -75,7 +75,7 @@ void EventDisp(TString rootfile, int ev)
 
     tev->GetEntry(event);
 
-    cout << "evt:" << c->EvtNum << ", trg:" << c->TrgCnt << ", clk:" << c->ClkCnt << endl;
+    cout << "evt:" << c->EvtCnt << ", trg:" << c->TrgCnt << ", clk:" << c->ClkCnt << endl;
     cout << "stopcellID " << flush;
     cout << d->GetStopCell() << endl;
     if(d->IsRaw() && offsetflag)
