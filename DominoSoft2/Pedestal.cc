@@ -62,7 +62,8 @@ void Pedestal(TString rootfile, TString newname)
          if(i%10000<200) continue; */
     e->GetEntry(i);
 
-    if(count->EvtCnt <100) continue;
+    //if(count->EvtCnt <100) continue;
+    if(count->EvtCnt <10) continue;
  
     for(int ch=0;ch<16;ch++)
       for(int cell=12;cell<c[ch]->GetN()-3;cell++)
