@@ -22,18 +22,19 @@
 #include <fstream>
 
 #include <TApplication.h>
+#include <TObjArray.h>
 #include <TCanvas.h>
 #include <TGraph.h>
 #include <TAxis.h>
 
-//#define BUFSIZE 256000
+#include "Config.h"
 #define BUFSIZE 1024000
-#define READDEPTH 1024
+//#define READDEPTH 1024
 //#define READDEPTH 1000
 #define EVENTLENGTH 16*(2*READDEPTH+4) //Byte
 #define UNITLENGTH EVENTLENGTH*10 //Byte
 //#define TOTALDEPTH 1024
-#define TOTALDEPTH 4096
+#define TOTALDEPTH CELLNUM
 
 using namespace std;
 
@@ -68,13 +69,15 @@ int main(int argc, char* argv[]){
 	int unitLen;
 	int sock;
 
+	TApplication app("app", &argc, argv);
+	//cout << app.Argc() << endl; for(int i=1;i<app.Argc();i++) cout << app.Argv(i) << endl; app.InputFiles()->Print(); cout <<endl; cout << argc << endl; for(int i=1;i<argc;i++) cout << argv[i] << endl; exit(-1);
 	/* Check inut values */
 	/* Get IP address and port # of a SiTCP */
 	if(argc != 4){
 		printf("Usage: %s <IP address> <event No> <filename>\n\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}else{
-		sitcpIpAddr = argv[1];
+	        sitcpIpAddr = argv[1];
 		event=atoi(argv[2]);
 		filename = argv[3];
 	}
@@ -103,8 +106,6 @@ int main(int argc, char* argv[]){
 
 	fw = fopen(filename,"wb");
 	char* rcvdBuffer_temp = reinterpret_cast<char*>(rcvdBuffer);
-
-	TApplication app("app", &argc, argv);
 
 	//Event Display Thread
 	pthread_t thread;

@@ -13,7 +13,7 @@ usage(){
     echo -e "-t val  \t: trigger select(0-8 default:2)"
     echo -e "-d val  \t: read depth(default: 1024)"
     echo -e "-s val  \t: stop timing from trigger"
-    echo -e "-f val  \t: sampling frequency(default: 67=1GHz)"
+    echo -e "-f val  \t: sampling frequency(default: 65~1GHz)"
     echo -e "-pf val  \t: pedestal frequency(default: 444444=300Hz)"
     echo -e "-pfo val  \t: pedestal frequency offset"
     echo -e "-a[a,0-6] val\t: attenuator gain(0.6-1.35 (++0.05))"
@@ -27,7 +27,8 @@ usage(){
     echo -e "-p   6543210P \t: PMT power enable(base 2)"
     echo -e "-h[a,0-6] val\t: PMT HV(0-1500V)"
     echo -e "-wr[bsw] add val: write Dragon register"
-    echo -e "-rd add len [.txt]: read Dragon register"
+    echo -e "-rd add len \t: read Dragon register"
+    echo -e "-rdo add len .txt: read Dragon register and output the value"
     echo -e "-m      \t: monitor HV, curent, etc.."
     exit 1
 }
@@ -126,7 +127,7 @@ do
 	  TRIGGER_SELECT=2
 	  READDEPTH=1024
 	  STOP_FROM_TRIG=530  #79 #for AT    125   530 #for TP   
-	  SAMP_FREQ=67
+	  SAMP_FREQ=65
 	  PEDE_FREQ=444444
 	  PEDE_FREQ_OFFSET=50
 
@@ -389,6 +390,13 @@ do
 	  shift 3
 	  ;;
       -rd)
+	  int_check $((0$2)) $((0x0)) $((0x10cf))
+	  RBCPRdFlag=1
+	  RBCPCOM="rd $2 $3"
+	  TMPBUFFILENAME=""
+	  shift 3
+	  ;;
+      -rdo)
 	  int_check $((0$2)) $((0x0)) $((0x10cf))
 	  RBCPRdFlag=1
 	  RBCPCOM="rd $2 $3"

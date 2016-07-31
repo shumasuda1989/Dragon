@@ -6,7 +6,7 @@
 
 using namespace std;
 
-void Pedestal(TString rootfile, TString newname=0);
+void Pedestal(TString rootfile, TString newname=0, bool checkdt=true);
 
 #ifndef __CINT__
 int main(int argc, char **argv)
@@ -31,9 +31,12 @@ int main(int argc, char **argv)
 }
 #endif
 
-void Pedestal(TString rootfile, TString newname)
+void Pedestal(TString rootfile, TString newname, bool checkdt)
 {
   TFile *f=new TFile(rootfile);
+  if(f->IsZombie())
+    exit(-1);
+
   TTree *e=(TTree*)f->Get("Events");
   //e->SetDirectory(0);
   //f->Close();
@@ -43,7 +46,7 @@ void Pedestal(TString rootfile, TString newname)
   TString filename;
   if(newname.IsNull()) filename="offset.root";
   else if(newname.EndsWith(".root")) filename=newname;
-  else cerr << "file name should be *.root" <<endl;
+  else cerr << "file name must be *.root" <<endl;
   TFile *of=new TFile(filename,"RECREATE");
   TProfile *p[16];
   TObjArray Plist(0);
@@ -57,19 +60,40 @@ void Pedestal(TString rootfile, TString newname)
   e->SetBranchAddress("Count",&count);
 
   int N=e->GetEntries();
+
+  ULong64_t clkpre=0,dt=0;
+  Long64_t compdt=0;
+  e->GetEntry(3);
+  if(checkdt){
+    dt=count->ClkCnt;
+    e->GetEntry(2);
+    dt-=count->ClkCnt;
+    cout << "dt = " << dt << endl;
+    compdt=3*dt /2;
+  }
+
   for(int i=0;i<N;i++){
     /* for(int i=200;i<N;i++){
          if(i%10000<200) continue; */
+    clkpre=count->ClkCnt;
     e->GetEntry(i);
 
     //if(count->EvtCnt <100) continue;
     if(count->EvtCnt <10) continue;
+
+    if(checkdt){
+      Long64_t ddt=(Long64_t)((ULong64_t)(count->ClkCnt -clkpre) -dt);
+      if(ddt> compdt){
+	cerr << "dt (=" << count->ClkCnt -clkpre <<") is different from other events between event " << i-1 << " and " << i << endl;
+	continue;
+      }
+    } 
  
     for(int ch=0;ch<16;ch++)
       for(int cell=12;cell<c[ch]->GetN()-3;cell++)
 	p[ch]->Fill((c[ch]->GetStopCell()+cell)%CELLNUM,c[ch]->GetY()[cell]);
 
-    if(i%1000==0) cout << "\r" << i<< ": " << c[0]->GetY()[10] <<flush;
+    if(i%100==0) cout << "\r" << i<< ": " << c[0]->GetY()[10] <<flush;
   }
   cout<<endl;
 

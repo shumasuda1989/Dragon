@@ -17,7 +17,7 @@ include $(ROOTSYS)/etc/Makefile.arch
 
 all: dep $(ALLTRGT) libCDomino.so  LN
 
-$(TARGET): % : %.o $(OBJS) 
+$(TARGET): % : %.o $(OBJS)
 	$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
 
 CDominoDict.cc: CDomino.h LinkDef.h
@@ -58,7 +58,7 @@ $(TARGET3): $(SUBDIR)/$(addsuffix .c, $(basename $(TARGET3)))
 $(TARGET4): $(SUBDIR)/$(addsuffix .c, $(basename $(TARGET4)))
 	$(CC) -o $@ $<
 
-.cc.o :
+.cc.o : 
 	$(CXX) $(CXXFLAGS) -c $<
 
 .c.o:
@@ -67,8 +67,8 @@ $(TARGET4): $(SUBDIR)/$(addsuffix .c, $(basename $(TARGET4)))
 LN: $(ALLTRGT) libCDomino.so
 	@cd .. ; ln -sf $(addprefix $(CURDIR)/,$^) ./
 
-dep: $(SRCS) 
-	@$(CXX) -MM $(CXXFLAGS) $(SRCS) > $(DEP)
+dep: $(SRCS) EthDispCas.cc
+	@$(CXX) -MM $(CXXFLAGS) $^ > $(DEP)
 
 -include dep.d
 

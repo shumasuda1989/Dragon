@@ -8,7 +8,7 @@ ClassImp(CDomino)
 void CDomino::SetCell()
 {
   for(int i=0;i<READDEPTH;i++)
-    dCell[i]=(dStopCell+1)%1024;
+    dCell[i]=(dStopCell+i)%CELLNUM;
 }
 
 /*
