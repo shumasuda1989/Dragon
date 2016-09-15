@@ -1,6 +1,6 @@
 #include "profdiff.C"
 
-void profdiff_loop(TString dir=".")
+void profdiff_loop(TString dir=".", int ch=0,bool printflag=false)
 {
 
   int Nfile=(gSystem->GetFromPipe(Form("ls -1 %s/offset_?????.root | wc -l",dir.Data()))).Atoi();
@@ -21,7 +21,7 @@ void profdiff_loop(TString dir=".")
   for( int i=2;i<=Nfile;i++){
 
     TFile *f2=new TFile(Form("%s/offset_%05d.root",dir.Data(),i));
-    TProfile *p=profdiff(f2,f1);
+    TProfile *p=profdiff(f2,f1,ch);
     p->SetDirectory(0);
     p->SetMarkerStyle(7);
     p->GetYaxis()->SetRangeUser(-15,15);
@@ -36,8 +36,12 @@ void profdiff_loop(TString dir=".")
       curcan++;
     }
 
-
   }
+
+  if(printflag)
+    for(int ican=0;ican<=curcan;ican++)
+      c1[ican]->Print(Form("%s/diffoffset.pdf%c",dir.Data(),
+			 curcan==0?'\0':(ican==0?'(':(ican==curcan?')':'\0'))));
 
   f1->Close();
 
