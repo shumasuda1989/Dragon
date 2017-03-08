@@ -33,6 +33,12 @@ usage(){
     exit 1
 }
 
+RBCP(){
+    echo "$1
+          quit" | \
+    $HOME/Dragon/rbcp 192.168.1.$DragonIP 4660
+}
+
 command_rbcp(){
     if [ "$1" = -nq ]; then QMODE=0; shift; else QMODE=1; fi
 
@@ -48,12 +54,12 @@ command_rbcp(){
     else
 
 	if [ $QMODE -eq 1 ]; then
-	    $HOME/Dragon/rbcp2 192.168.1.$DragonIP 4660 "$1" >/dev/null 
+	    RBCP "$1" >/dev/null 
 	else
-	    $HOME/Dragon/rbcp2 192.168.1.$DragonIP 4660 "$1" 
+	    RBCP "$1" 
 	fi
 	if [ $? -ne 0 ]; then
-	    echo ""; echo RBCP ERROR
+	    echo ""; echo "RBCP ERROR"
 	    usage
 	fi
 
@@ -61,10 +67,23 @@ command_rbcp(){
 }
 
 rbcpread(){
-    if [ $DEBUG_FLAG -eq 0 ] || [ $DEBUG_FLAG -eq 2 ] ; then
-	read $1 <rcvdBuf.txt 
+    # if [ $DEBUG_FLAG -eq 0 ] || [ $DEBUG_FLAG -eq 2 ] ; then
+    # 	read $1 <rcvdBuf.txt 
+    # fi
+    # if [ $DEBUG_FLAG -eq 0 ] && [ -f rcvdBuf.txt ]; then rm rcvdBuf.txt; fi
+
+    RBCP "rd $1 $2" | grep "0x" | sed -e 's/[0x........]//g' -e 's/- //g' | sed 's/ //g'
+}
+
+rbcpload(){
+    if [ -s $1 ]; then 
+	command_rbcp "load $tmpfile"
+	if [ $? -eq 0 ]; then
+	    : >$1
+	fi
+    else
+	echo $1 is 0 byte or does not exist
     fi
-    if [ $DEBUG_FLAG -eq 0 ] && [ -f rcvdBuf.txt ]; then rm rcvdBuf.txt; fi
 }
 
 ch_check(){
@@ -95,7 +114,7 @@ num_check(){
 }
 
 flag_check(){
-    while [ $((0x$(cat rcvdBuf.txt))) -ne 0 ]; do
+    while [ $(rbcpread $1 1) -ne 0 ]; do
 	echo "writing command not done!"
 	usleep 100000
     done
@@ -392,13 +411,16 @@ do
       -rd)
 	  int_check $((0$2)) $((0x0)) $((0x10cf))
 	  RBCPRdFlag=1
-	  RBCPCOM="rd $2 $3"
+	  RBCPADDR=$2
+	  RBCPLENG=$3
 	  TMPBUFFILENAME=""
 	  shift 3
 	  ;;
       -rdo)
 	  int_check $((0$2)) $((0x0)) $((0x10cf))
 	  RBCPRdFlag=1
+	  RBCPADDR=$2
+	  RBCPLENG=$3
 	  RBCPCOM="rd $2 $3"
 	  TMPBUFFILENAME=$4
 	  shift 4
@@ -429,9 +451,9 @@ if [ "$RBCPWrFlag" -eq 1 ]; then
 fi
 
 if [ "$RBCPRdFlag" -eq 1 ]; then
-    command_rbcp -nq "$RBCPCOM"
+    command_rbcp -nq "rd $RBCPADDR $RBCPLENG"
     if [ "x$(echo "$TMPBUFFILENAME" | grep ".txt$")" != "x" ]; then
-	cat rcvdBuf.txt >$TMPBUFFILENAME
+	rbcpread $RBCPADDR $RBCPLENG >$TMPBUFFILENAME
     fi
 #	  rbcpread tmptmptmp
 #	  echo $2 $tmptmptmp
@@ -459,9 +481,29 @@ wrb x1099 1
 #cascade num
 wrb x109c x14
 #wrb x109c 4
+
+#DRS4 PLL check config
+wrb x109a xff
+#wrb x109a xfe
+#wrb x109a x00
+
+#DRS Reference Clock Select
+#local clock
+wrb x109E x00
+#external clock
+#wrb x109E x01
+
+#DRS Timing Calibration enable
+#wrb x1099 x03
+#wrb x109B xff
+#disable
+wrb x1099 x00
+wrb x109B x00
+
 " >>$tmpfile
 
 fi
+
 
 if [ -n "$TRIGGER_SELECT" ]; then
     echo "#trigger select" >>$tmpfile
@@ -524,31 +566,7 @@ if [ -n "$DAC_CALP" ];then
     echo V_CAL   =$(echo "scale=4;($DAC_CALP-$DAC_CALN)*2.5/2^16" | bc)
 fi
 
-if [ "$DEFAULTFlag" -eq 1 ]; then
-echo \
-"
-#DRS4 PLL check config
-wrb x109a xff
-#wrb x109a xfe
-#wrb x109a x00
-
-#DRS Reference Clock Select
-#local clock
-wrb x109E x00
-#external clock
-#wrb x109E x01
-
-#DRS Timing Calibration enable
-#wrb x1099 x03
-#wrb x109B xff
-#disable
-wrb x1099 x00
-wrb x109B x00
-" >>$tmpfile
-fi
-
-
-
+rbcpload $tmpfile
 
 ########################
 ### Analog Trigger
@@ -563,10 +581,13 @@ echo \
 wrb x1050 4
 wrs x1051 x0436
 wrb x1040 xff
-rd x1040 1
-wrb x1041 xff
-rd x1053 3
+#rd x1040 1
+#wrb x1041 xff
+#rd x1053 3
 " >>$tmpfile
+
+rbcpload $tmpfile
+flag_check x1040
 
 fi
 
@@ -579,6 +600,8 @@ wrs x1051 ${THLEL0[$ch]}
 wrb x1040 xff
 rd x1040 1" >>$tmpfile
 L0THREFlag="Done"
+rbcpload $tmpfile
+flag_check x1040
 fi
 done
 echo "" >>$tmpfile
@@ -602,7 +625,8 @@ elif [ -n "${Att_G_b[$ch]}" ] || [ -n "${Ib_ClipVb[$ch]}" ]; then
     command_rbcp "wrb x1050 1$ch"
     command_rbcp "wrb x1041 xff"
     command_rbcp "rd x1054 2"
-    rbcpread "ConfRes[$ch]"
+    # rbcpread "ConfRes[$ch]"
+    ConfRes[$ch]=$(rbcpread x1054 2)
     ConfRes[$ch]=$((0x${ConfRes[$ch]}))
 
     if [ -n "${Att_G_b[$ch]}" ]; then
@@ -625,6 +649,8 @@ echo \
 wrb x1050 1$ch
 wrs x1051 x${ConfRes[$ch]}
 wrb x1040 xff" >>$tmpfile
+rbcpload $tmpfile
+flag_check x1040
 fi
 
 done
@@ -649,11 +675,19 @@ echo \
 wrb x1056 101
 wrs x1057 x031B
 wrb x1045 xff
+" >>$tmpfile
+rbcpload $tmpfile
+flag_check x1045
+
+echo \
+"
 #adder switch0
 wrb x1056 100
 wrs x1057 x3B76
 wrb x1045 xff
 " >>$tmpfile
+rbcpload $tmpfile
+flag_check x1045
 
 fi
 
@@ -667,13 +701,16 @@ wrb x1056 ${ch2regconv[$DACch]}
 wrb x1057 ${DAC_TH_H[$DACch]}
 wrb x1058 ${DAC_TH_L[$DACch]}
 wrb x1045 xff" >>$tmpfile
+rbcpload $tmpfile
+flag_check x1045
 
 echo DAC_TH${DACch}_H=${DAC_TH_H[$DACch]}, DAC_TH${DACch}_L=${DAC_TH_L[$DACch]}
 elif [ -n "${DAC_TH_H[$DACch]}" ] || [ -n "${DAC_TH_L[$DACch]}" ]; then
     command_rbcp "wrb x1056 ${ch2regconv[$DACch]}"
     command_rbcp "wrb x1046 xff"
     command_rbcp "rd x1059 2" 
-    rbcpread tmpthre
+    # rbcpread tmpthre
+    tmpthre=$(rbcpread x1059 2)
 
     if [ "x${DAC_TH_H[$DACch]}" = "x" ]; then  
 	DAC_TH_H[$DACch]=$((0x$(echo $tmpthre | cut -c 1-2)))
@@ -688,6 +725,8 @@ wrb x1056 ${ch2regconv[$DACch]}
 wrb x1057 ${DAC_TH_H[$DACch]}
 wrb x1058 ${DAC_TH_L[$DACch]}
 wrb x1045 xff" >>$tmpfile
+rbcpload $tmpfile
+flag_check x10
 
 fi
 done
@@ -699,14 +738,32 @@ echo \
 #L0 delay#####
 #init delay
 wrw x105c x40000000
-wrb x1043 xff
+wrb x1043 xff" >> $tmpfile
+rbcpload $tmpfile
+flag_check x1043
+
+echo \
+"
 wrw x105c x40010000
-wrb x1043 xff
+wrb x1043 xff" >> $tmpfile
+rbcpload $tmpfile
+flag_check x1043
+
+echo \
+"
 wrw x105c x400a0800
-wrb x1043 xff
+wrb x1043 xff" >> $tmpfile
+rbcpload $tmpfile
+flag_check x1043
+
+echo \
+"
 #channel enable
 wrw x105c x46127f00
 wrb x1043 xff" >> $tmpfile
+rbcpload $tmpfile
+flag_check x1043
+
 fi
 
 
@@ -725,6 +782,8 @@ echo \
 "#ch$ch delay
 wrw x105c x$comword
 wrb x1043 xff" >>$tmpfile
+rbcpload $tmpfile
+flag_check x1043
 
 fi
 done
@@ -757,11 +816,17 @@ wrs x10a5 x2800
 #wrs x10a5 x2801
 #wrs x10a5 x2802
 wrb x10b6 1
-wrb x10a0 xff
-#tp pow enable channel
+wrb x10a0 xff" >> $tmpfile
+rbcpload $tmpfile
+flag_check x10a0
+
+echo \
+"#tp pow enable channel
 wrb x10a5 x29
 wrb x10a6 x$ENABLED_Ch
 wrb x10a0 xff" >>$tmpfile
+rbcpload $tmpfile
+flag_check x10a0
 
 fi
 
@@ -774,6 +839,9 @@ wrb x10a5 x2$ch
 wrb x10a6 ${TP_GAIN[$ch]}
 wrb x10b6 1
 wrb x10a0 xff" >>$tmpfile
+rbcpload $tmpfile
+flag_check x10a0
+
 fi
 done
 
@@ -786,7 +854,7 @@ echo \
 "#tp pow disable channel
 wrb x10a5 x29
 wrb x10a6 $DISABLED_Ch
-wrb x10a0 xff" >>$tmpfile
+wrb x10a0 xff" >> $tmpfile
 
 if [ "$DISABLED_Ch" -eq 0 ]; then
 echo \
@@ -811,7 +879,8 @@ echo \
 wrb x10a5 x10
 wrb x10a6 x$PMTen_Ch
 wrb x10a0 xff" >$tmpfile
-command_rbcp "load $tmpfile"
+rbcpload $tmpfile
+flag_check x10a0
 
 fi
 
@@ -819,8 +888,10 @@ if [ "$HVnAFlag" -eq 1 ]; then
     command_rbcp "wrb x10a5 xc4" # RAM_0x010 read
     command_rbcp "wrb x10b6 16"
     command_rbcp "wrb x10a0 xff"
-    command_rbcp "rd x10b9 14" 
-    rbcpread RAM_0x010
+    flag_check x10a0
+    # command_rbcp "rd x10b9 14" 
+    # rbcpread RAM_0x010
+    RAM_0x010=$(rbcpread x10b9 14)
 fi
 
 if [ "$HVFlag" -eq 1 ]; then
@@ -846,17 +917,22 @@ done
 
 echo \
 "wrb x10b6 16
-wrb x10a0 xff
+wrb x10a0 xff" >>$tmpfile
+rbcpload $tmpfile
+flag_check x10a0
 
-#hv set
+echo \
+"#hv set
 wrs x10a5 x3011
 wrb x10b6 1
 wrb x10a0 xff" >>$tmpfile
+rbcpload $tmpfile
+flag_check x10a0
 
 fi
 
 
-command_rbcp "load $tmpfile"
+#command_rbcp "load $tmpfile"
 
 
 
@@ -876,13 +952,16 @@ echo \
 "wrb x10b6 16
 wrb x10a5 $(( (2#11<<6) + (($i+2)<<2) ))
 wrb x10a0 xff" >$tmpfile
-command_rbcp "load $tmpfile"
+rbcpload $tmpfile
+flag_check x10a0
+#command_rbcp "load $tmpfile"
 
 echo \
 "rd x10b7 16" >$tmpfile
-command_rbcp "load $tmpfile"
+rbcpload $tmpfile
 
-rbcpread "RAM_0x020[$i]"
+#rbcpread "RAM_0x020[$i]"
+RAM_0x020[$i]=$(rbcpread x10b7 16)
 #echo RAM[$i]=${RAM_0x020[$i]}
 
 }
@@ -893,7 +972,9 @@ echo \
 wrs x10a5 x3020
 wrb x10a0 xff" >$tmpfile
 echo "converting ADC values..."
-command_rbcp "load $tmpfile"
+rbcpload $tmpfile
+flag_check x10a0
+
 
 
 sleep 2
@@ -912,7 +993,8 @@ wrs x10a5 x3053
 wrb x10a0 xff" >$tmpfile
 echo ""
 echo "converting Amp Temp...."
-command_rbcp "load $tmpfile"
+rbcpload $tmpfile
+flag_check x10a0
 
 
 sleep 2
@@ -927,7 +1009,8 @@ wrs x10a5 x306f
 wrb x10a0 xff" >>$tmpfile
 echo ""
 echo "converting SCB Temp...."
-command_rbcp "load $tmpfile"
+rbcpload $tmpfile
+flag_check x10a0
 
 
 sleep 2
